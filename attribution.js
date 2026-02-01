@@ -1,7 +1,7 @@
 (function() {
   'use strict';
 
-  var ENDPOINT = 'https://darlena.shop/recordAttributionTouchpoint';
+  var ENDPOINT = 'https://darlena.shop/recordTouchpointV2';
 
   var CLICK_KEYS = {
     ScCid:  { key: 'snap_ScCid',    keyTs: 'snap_ScCid_ts',    urlParam: 'ScCid',  maxAgeDays: 28 },
@@ -493,6 +493,16 @@
       var a = document.createElement('a');
       a.href = url;
       return a.hostname || null;
+    } catch (e) { return null; }
+  }
+
+  function getOriginFromUrl(url) {
+    try {
+      if (!url) return null;
+      var a = document.createElement('a');
+      a.href = url;
+      if (!a.protocol || !a.host) return null;
+      return a.protocol + '//' + a.host;
     } catch (e) { return null; }
   }
 
@@ -1044,7 +1054,11 @@
   function sendRequest(payload) {
     try {
       var body = JSON.stringify(payload);
-      if (navigator.sendBeacon) {
+      var endpointOrigin = getOriginFromUrl(ENDPOINT);
+      var pageOrigin = window.location.protocol + '//' + window.location.host;
+      var isCrossOrigin = endpointOrigin && endpointOrigin !== pageOrigin;
+
+      if (!isCrossOrigin && navigator.sendBeacon) {
         try {
           var blob = new Blob([body], { type: 'application/json' });
           navigator.sendBeacon(ENDPOINT, blob);
@@ -1056,7 +1070,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: body,
         keepalive: true,
-        mode: 'cors'
+        mode: 'cors',
+        credentials: 'omit'
       }).catch(function() {});
     } catch (e) {}
   }
